@@ -3,7 +3,8 @@
 
 
 use embassy_executor::Spawner;
-use embassy_rp::gpio::{AnyPin, Flex};
+use embassy_rp::gpio::{Flex};
+use embassy_rp::Peri;
 use embassy_time::{Duration, Timer};
 use embassy_dht_sensor::{DHTSensor, DHTSensorError};
 use {defmt::info, defmt_rtt as _, panic_probe as _};
@@ -12,7 +13,7 @@ use {defmt::info, defmt_rtt as _, panic_probe as _};
 async fn main(_spawner: Spawner) -> ! {
     let p = embassy_rp::init(Default::default());
 
-    let pin = Flex::new(AnyPin::from(p.PIN_0));
+    let pin = Flex::new(Peri::from(p.PIN_0));
 
     let mut dht_sensor = DHTSensor::new(pin);
     loop {
