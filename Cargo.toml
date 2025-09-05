@@ -9,6 +9,7 @@ description = "DHT sensor driver for the Embassy async runtime"
 readme = "README.md"
 
 [features]
+default = ["rp2040", "dht2x", "rp_pio"]
 rp2040 = ["dep:embassy-rp"]
 examples = ["dep:defmt", "dep:defmt-rtt", "dep:panic-probe"]
 dht1x = []
