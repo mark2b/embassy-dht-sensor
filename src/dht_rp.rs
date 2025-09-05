@@ -1,19 +1,21 @@
-use cortex_m::interrupt::free;
-use embassy_rp::gpio::{Flex, Level, Pull};
-use embassy_rp::gpio::Level::{High, Low};
-use embassy_time::{block_for, Duration};
-use crate::{DHTSensorError, HIGH_LEVEL_THRESHOLD, LOW_LEVEL_THRESHOLD, WAIT_FOR_READINESS_LEVEL_THRESHOLD};
+use crate::DTHResponse;
 use crate::DHTSensorError::InvalidData;
+use crate::{
+    DHTSensorError,
+};
+use cortex_m::interrupt::free;
+use embassy_rp::gpio::Level::{High, Low};
+use embassy_rp::gpio::{Flex, Level, Pull};
+use embassy_time::{block_for, Duration};
 
-#[derive(Clone)]
-pub struct DTHResponse {
-    pub humidity: f32,
-    pub temperature: f32,
-}
+const WAIT_FOR_READINESS_LEVEL_THRESHOLD: u32 = 80;
+const LOW_LEVEL_THRESHOLD: u32 = 55;
+const HIGH_LEVEL_THRESHOLD: u32 = 75;
 
 pub struct DHTSensor<'a> {
     pin: Flex<'a>,
     last_response: Option<DTHResponse>,
+    last_read_time: Option<embassy_time::Instant>,
 }
 
 impl<'a> DHTSensor<'a> {
@@ -21,22 +23,32 @@ impl<'a> DHTSensor<'a> {
         DHTSensor {
             pin,
             last_response: None,
+            last_read_time: None,
         }
     }
 
     pub fn read(&mut self) -> Result<DTHResponse, DHTSensorError> {
+        let now = embassy_time::Instant::now();
+        if let Some(last_read_time) = self.last_read_time {
+            if now - last_read_time < Duration::from_secs(crate::dht::MIN_REQUEST_INTERVAL_SECS) {
+                if let Some(response) = &self.last_response {
+                    return Ok(response.clone());
+                }
+            }
+        }
         match self.read_raw_data() {
             Ok(data) => {
                 let humidity_data: &[u16; 2] = &data[0..2].try_into().unwrap();
-                let humidity = humidity(humidity_data);
+                let humidity = dht::humidity(humidity_data);
                 let temperature_data: &[u16; 2] = &data[2..4].try_into().unwrap();
-                let temperature = temperature(temperature_data);
+                let temperature = dht::temperature(temperature_data);
                 if humidity <= 100.0 {
                     let response = DTHResponse {
                         humidity,
                         temperature,
                     };
                     self.last_response = Some(response.clone());
+                    self.last_read_time = Some(embassy_time::Instant::now());
                     Ok(response)
                 }
                 else {
@@ -62,14 +74,10 @@ impl<'a> DHTSensor<'a> {
         let mut all_bits_cycles: [u32; 80] = [0; 80];
 
         free(|_| {
-
             // Wake up the sensor
             self.pin.set_as_output();
             self.pin.set_low();
-            #[cfg(feature = "dht2x")]
-            block_for(Duration::from_micros(1100u64));
-            #[cfg(feature = "dht1x")]
-            block_for(Duration::from_millis(20u64));
+            block_for(Duration::from_micros(crate::dht::START_LOW_INTERVAL_US));
 
             // Ask for data
             self.pin.set_high();
@@ -133,7 +141,7 @@ impl<'a> DHTSensor<'a> {
 }
 
 #[cfg(feature = "dht2x")]
-mod dht2x {
+mod dht {
     pub(crate) fn humidity(data: &[u16; 2]) -> f32 {
         ((data[0] << 8) | data[1]) as f32 / 10.0
     }
@@ -147,29 +155,19 @@ mod dht2x {
     }
 }
 
+
 #[cfg(feature = "dht1x")]
-mod dht1x {
+mod dht {
     pub(crate) fn humidity(data: &[u16; 2]) -> f32 {
-        (data[0] + data[1]) as f32 / 10.0
+        data[0] as f32 + ((data[1] & 0x00FF) as f32 * 0.1)
     }
 
     pub(crate) fn temperature(data: &[u16; 2]) -> f32 {
-        let mut temperature = (data[0] + data[1]) as f32 / 10.0;
-        if data[0] & 0x80 != 0 {
+        let mut temperature = data[0] as f32 + ((data[1] & 0x00FF) as f32 * 0.1);
+        if data[1] & 0x8000 != 0 {
             temperature = -temperature;
         }
         temperature
     }
 }
 
-#[cfg(not(any(feature = "dht1x", feature = "dht2x")))]
-compile_error!("You must select a DHT sensor model with a feature flag: dht1x or dht2x");
-
-#[cfg(all(feature = "dht1x", feature = "dht2x"))]
-compile_error!("You must select only one DHT sensor model with a feature flag: dht1x or dht2x");
-
-#[cfg(feature = "dht1x")]
-use dht1x::{humidity, temperature};
-
-#[cfg(feature = "dht2x")]
-use dht2x::{humidity, temperature};

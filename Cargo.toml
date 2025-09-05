@@ -1,6 +1,6 @@
 [package]
 name = "embassy-dht-sensor"
-version = "0.1.5"
+version = "0.2.0"
 edition = "2021"
 authors = ["Mark Berner"]
 license = "MIT OR Apache-2.0"
@@ -9,16 +9,32 @@ description = "DHT sensor driver for the Embassy async runtime"
 readme = "README.md"
 
 [features]
-default = ["rp2040", "dht2x"]
 rp2040 = ["dep:embassy-rp"]
 examples = ["dep:defmt", "dep:defmt-rtt", "dep:panic-probe"]
 dht1x = []
 dht2x = []
+rp_pio = []
 
 [[example]]
-name = "read-dht-sensor-rp"
+name = "read-dht-sensor-rp-dht2x"
 path = "examples/read-dht-sensor-rp.rs"
 required-features = ["rp2040", "examples", "dht2x"]
+
+[[example]]
+name = "read-dht-sensor-rp-dht1x"
+path = "examples/read-dht-sensor-rp.rs"
+required-features = ["rp2040", "examples", "dht1x"]
+
+[[example]]
+name = "read-dht-sensor-rp-pio-dht2x"
+path = "examples/read-dht-sensor-rp-pio.rs"
+required-features = ["rp2040", "rp_pio", "examples", "dht2x"]
+
+[[example]]
+name = "read-dht-sensor-rp-pio-dht1x"
+path = "examples/read-dht-sensor-rp-pio.rs"
+required-features = ["rp2040", "rp_pio", "examples", "dht1x"]
+
 
 [lib]
 name = "embassy_dht_sensor"
@@ -35,3 +51,5 @@ embassy-rp = { version = "0.7", features = ["rp2040", "defmt", "unstable-pac", "
 defmt = { version = "1", optional = true }
 defmt-rtt = { version = "1", optional = true }
 panic-probe = { version = "1", features = ["print-defmt"], optional = true }
+fixed = "1.29.0"
+
