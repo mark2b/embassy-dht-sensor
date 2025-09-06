@@ -1,6 +1,6 @@
 [package]
 name = "embassy-dht-sensor"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 authors = ["Mark Berner"]
 license = "MIT OR Apache-2.0"
@@ -17,25 +17,14 @@ dht2x = []
 rp_pio = []
 
 [[example]]
-name = "read-dht-sensor-rp-dht2x"
+name = "read-dht-sensor-rp"
 path = "examples/read-dht-sensor-rp.rs"
-required-features = ["rp2040", "examples", "dht2x"]
+required-features = ["rp2040", "examples"]
 
 [[example]]
-name = "read-dht-sensor-rp-dht1x"
-path = "examples/read-dht-sensor-rp.rs"
-required-features = ["rp2040", "examples", "dht1x"]
-
-[[example]]
-name = "read-dht-sensor-rp-pio-dht2x"
+name = "read-dht-sensor-rp-pio"
 path = "examples/read-dht-sensor-rp-pio.rs"
-required-features = ["rp2040", "rp_pio", "examples", "dht2x"]
-
-[[example]]
-name = "read-dht-sensor-rp-pio-dht1x"
-path = "examples/read-dht-sensor-rp-pio.rs"
-required-features = ["rp2040", "rp_pio", "examples", "dht1x"]
-
+required-features = ["rp2040", "rp_pio", "examples"]
 
 [lib]
 name = "embassy_dht_sensor"
@@ -45,12 +34,12 @@ path = "src/lib.rs"
 cortex-m = { version = "0.7", features = ["inline-asm"] }
 cortex-m-rt = "0.7"
 
-embassy-executor = { version = "0.8", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
-embassy-time = { version = "0.4", features = ["defmt", "defmt-timestamp-uptime"] }
+embassy-executor = { version = "0.9", features = ["arch-cortex-m", "executor-thread", "executor-interrupt", "defmt"] }
+embassy-time = { version = "0.5", features = ["defmt", "defmt-timestamp-uptime"] }
 
-embassy-rp = { version = "0.7", features = ["rp2040", "defmt", "unstable-pac", "time-driver", "critical-section-impl"], optional = true }
+embassy-rp = { version = "0.8.0", features = ["rp2040", "defmt", "unstable-pac", "time-driver", "critical-section-impl"], optional = true }
 defmt = { version = "1", optional = true }
 defmt-rtt = { version = "1", optional = true }
 panic-probe = { version = "1", features = ["print-defmt"], optional = true }
-fixed = "1.29.0"
+fixed = "1.29"
 

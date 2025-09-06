@@ -65,7 +65,6 @@ impl<'a, PIO: Instance> DHTSensor<'a, PIO> {
         cfg.clock_divider = 416.666667f32.to_fixed(); // 300KHz at 125 MHz system clock
         sm.set_pin_dirs(embassy_rp::pio::Direction::Out, &[&target_pin]);
         sm.set_config(&cfg);
-        sm.set_enable(true);
         DHTSensor {
             sm,
             irq_flags,
@@ -75,6 +74,7 @@ impl<'a, PIO: Instance> DHTSensor<'a, PIO> {
     }
 
     async fn read_raw_data(&mut self) -> Result<[u16; 2], DHTSensorError> {
+        self.sm.set_enable(true);
         self.irq_flags.clear(0);
         self.sm.tx().push((crate::dht::START_LOW_INTERVAL_US as f32 * 0.333f32) as u32);  // 1 cycle = 3.33us at 300KHz
 
@@ -84,6 +84,8 @@ impl<'a, PIO: Instance> DHTSensor<'a, PIO> {
         let checksum_data = self.sm.rx().wait_pull().await as u8;
 
         self.irq_flags.clear(0);
+        self.sm.set_enable(false);
+
         // Calculate checksum
         let humidity_bytes: [u8; 2] = humidity_data.to_le_bytes();
         let temperature_bytes: [u8; 2] = temperature_data.to_le_bytes();
