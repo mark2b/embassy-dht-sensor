@@ -27,7 +27,7 @@ pub struct DTHResponse {
 
 #[derive(Debug, Clone)]
 pub enum DHTSensorError {
-    Timeout,
+    NoData,
     ChecksumError,
     InvalidData,
 }

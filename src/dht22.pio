@@ -1,0 +1,31 @@
+.program  dht22
+    pull block 			; Wait for start command. Value passed in is for timing the low start pulse, value is moved into the OSR
+    mov x osr			; Use scratch register x for the timing of the start pulse
+    set pindirs 1		; Set pin as output
+    set pins 0 			; Set pin low
+
+    ; Low Start Pulse
+start_low:
+    jmp x-- start_low 	; Delay to produce the low start pulse
+    set pins 1			; Set pin high for a single clock cycle (3.3uS at 300KHz clock)
+    set pindirs 0 [2]	; Set pin as input, floats high via external pullup, delay for 9.9uS (clock cycle for the command + 2 delay cycles)
+
+    ; Start Acknowledge from the dht22 sensor (low of 80uS followed by a high of 80uS)
+    wait 0 pin 0		; Wait for pin to be driven low ("wait pin" command uses a pin number which is *relative* to IN group)
+    wait 1 pin 0		; Wait for pin to be driven high
+
+    ; Clock in 40 bits
+    ; A "0" bit is low for 50uS followed by a high of 26-28uS
+    ; A "1" bit is low for 50uS followed by a high of 70uS
+    set y 3				; Outer loop of x4
+data1:
+    set x 9				; Inner loop of x10
+data2:
+    wait 0 pin 0		; Find the low period, the start of a bit
+    wait 1 pin 0 [13]	; Find the rising edge, we're now in the high period of a bit. A delay of [13]=43.3uS at 300KHz pio clock.
+                        ; If the bit at this point is a "0", this is past the high period (26-28uS) and into the low period of the next bit.
+                        ; If the bit at this point is a "1", this is still in the high period of this bit.
+    in pins 1			; Measure the pin, copy it into the ISR. Autopush set for 16 bits.
+    jmp x-- data2
+    jmp y-- data1
+    push block

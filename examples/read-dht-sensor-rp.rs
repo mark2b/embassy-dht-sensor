@@ -13,7 +13,7 @@ use {defmt::info, defmt_rtt as _, panic_probe as _};
 async fn main(_spawner: Spawner) -> ! {
     let p = embassy_rp::init(Default::default());
 
-    let pin = Flex::new(Peri::from(p.PIN_0));
+    let pin = Flex::new(Peri::from(p.PIN_4));
 
     let mut dht_sensor = DHTSensor::new(pin);
     loop {

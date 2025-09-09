@@ -43,3 +43,10 @@ defmt-rtt = { version = "1", optional = true }
 panic-probe = { version = "1", features = ["print-defmt"], optional = true }
 fixed = "1.29"
 
+[dev-dependencies]
+embassy-usb-logger = "0.5.1"
+embassy-usb = "0.5.1"
+log = "0.4.28"
+
+
+

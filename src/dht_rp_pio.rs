@@ -1,89 +1,66 @@
 use crate::DHTSensorError::InvalidData;
 use crate::{DHTSensorError, DTHResponse};
-use embassy_rp::pio::program::pio_asm;
-use embassy_rp::pio::{Common, FifoJoin, Instance, IrqFlags, Pin, StateMachine};
+use embassy_rp::pio::program::{pio_file};
+use embassy_rp::pio::{Common, FifoJoin, Instance, Pin, StateMachine};
 use embassy_time::Duration;
 use fixed::prelude::ToFixed;
+use crate::dht::START_LOW_INTERVAL_US;
 
-pub struct DHTSensor<'a, PIO: Instance> {
-    sm: StateMachine<'a, PIO, 0>,
-    irq_flags: IrqFlags<'a, PIO>,
+pub struct DHTSensor<'a, PIO: Instance, const SM: usize> {
+    pio: Common<'a, PIO>,
+    sm: StateMachine<'a, PIO, SM>,
+    data_pin: Pin<'a, PIO>,
     last_response: Option<DTHResponse>,
     last_read_time: Option<embassy_time::Instant>,
+    initialized: bool,
 }
 
-impl<'a, PIO: Instance> DHTSensor<'a, PIO> {
+impl<'a, PIO: Instance, const SM: usize> DHTSensor<'a, PIO, SM> {
     pub fn new(
-        target_pin: Pin<'a, PIO>,
-        mut pio: Common<'a, PIO>,
-        mut sm: StateMachine<'a, PIO, 0>,
-        irq_flags: IrqFlags<'a, PIO>,
+        data_pin: Pin<'a, PIO>,
+        pio: Common<'a, PIO>,
+        sm: StateMachine<'a, PIO, SM>,
     ) -> Self {
-        let prg = pio_asm!(
-            r#"
-            .wrap_target
-                pull block
-                mov x osr
-                set pindirs 1
-                set pins 0
-            start_low:
-                jmp x-- start_low
-                set pins 1
-                set pindirs 0 [2]
-
-                wait 0 pin 0
-                wait 1 pin 0
-                set y 3
-            outer_loop:
-                set x 9
-            inner_loop:
-                wait 0 pin 0
-                wait 1 pin 0 [13]
-
-                in pins 1
-                jmp x-- inner_loop
-                jmp y-- outer_loop
-                push
-                irq wait 0
-            .wrap
-        "#
-        );
-
-        let mut cfg = embassy_rp::pio::Config::default();
-
-        cfg.use_program(&pio.load_program(&prg.program), &[]);
-
-        cfg.set_set_pins(&[&target_pin]);
-        cfg.set_in_pins(&[&target_pin]);
-
-        cfg.shift_in = embassy_rp::pio::ShiftConfig {
-            threshold: 32,
-            direction: embassy_rp::pio::ShiftDirection::Left,
-            auto_fill: true,
-        };
-        cfg.fifo_join = FifoJoin::Duplex;
-        cfg.clock_divider = 416.666667f32.to_fixed(); // 300KHz at 125 MHz system clock
-        sm.set_pin_dirs(embassy_rp::pio::Direction::Out, &[&target_pin]);
-        sm.set_config(&cfg);
         DHTSensor {
+            pio,
             sm,
-            irq_flags,
+            data_pin,
             last_response: None,
             last_read_time: None,
+            initialized: false,
         }
     }
 
     async fn read_raw_data(&mut self) -> Result<[u16; 2], DHTSensorError> {
-        self.sm.set_enable(true);
-        self.irq_flags.clear(0);
-        self.sm.tx().push((crate::dht::START_LOW_INTERVAL_US as f32 * 0.333f32) as u32);  // 1 cycle = 3.33us at 300KHz
+        if !self.initialized {
+            let prg = pio_file!("src/dht22.pio");
+            let mut cfg = embassy_rp::pio::Config::default();
 
-        let data = self.sm.rx().wait_pull().await;
+            cfg.use_program(&self.pio.load_program(&prg.program), &[]);
+
+            cfg.set_set_pins(&[&self.data_pin]);
+            cfg.set_in_pins(&[&self.data_pin]);
+            cfg.set_jmp_pin(&self.data_pin);
+
+            cfg.clock_divider = 416.666667f32.to_fixed(); // 300KHz at 125 MHz system clock
+            cfg.fifo_join = FifoJoin::Duplex;
+
+            cfg.shift_in = embassy_rp::pio::ShiftConfig {
+                threshold: 32,
+                direction: embassy_rp::pio::ShiftDirection::Left,
+                auto_fill: true,
+            };
+            self.sm.set_pin_dirs(embassy_rp::pio::Direction::Out, &[&self.data_pin]);
+            self.sm.set_config(&cfg);
+            self.initialized = true;
+        }
+
+        self.sm.set_enable(true);
+        self.sm.tx().push((START_LOW_INTERVAL_US as f32 * 0.333) as u32);  // 1 cycle = 3.33us at 300KHz
+        let data =self.sm.rx().wait_pull().await;
+        let checksum_data = self.sm.rx().wait_pull().await as u8;
         let humidity_data = u16::from((data >> 16) as u16);
         let temperature_data = u16::from((data & 0xffff) as u16);
-        let checksum_data = self.sm.rx().wait_pull().await as u8;
-
-        self.irq_flags.clear(0);
         self.sm.set_enable(false);
 
         // Calculate checksum
@@ -108,6 +85,11 @@ impl<'a, PIO: Instance> DHTSensor<'a, PIO> {
                 if let Some(response) = &self.last_response {
                     return Ok(response.clone());
                 }
+            }
+        }
+        else {
+            if now.as_secs() < crate::dht::MIN_REQUEST_INTERVAL_SECS {
+                return Err(DHTSensorError::NoData);
             }
         }
         match self.read_raw_data().await {
