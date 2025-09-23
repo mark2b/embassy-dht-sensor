@@ -10,7 +10,7 @@ This library should be used in **release** mode. The measurements made in the **
 
 ### PIO support
 Since version 0.2.2 this library supports PIO (Programmable Input/Output) for Raspberry Pi Pico, which allows for more accurate timing when reading data from the DHT sensors.
-To enable PIO support, make sure to include the `pio` feature in your `Cargo.toml`. Using PIO is recommended for better performance.
+To enable PIO support, make sure to include the `rp_pio` feature in your `Cargo.toml`. Using PIO is recommended for better performance.
 There are no requirements to run the library in release mode when using PIO.
 
 ```toml
