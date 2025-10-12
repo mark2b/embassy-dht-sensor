@@ -7,11 +7,16 @@ compile_error!("You must select a DHT sensor model with a feature flag: dht1x or
 #[cfg(all(feature = "dht1x", feature = "dht2x"))]
 compile_error!("You must select only one DHT sensor model with a feature flag: dht1x or dht2x");
 
-
-#[cfg(all(feature = "rp2040", not(feature = "rp_pio")))]
+#[cfg(all(
+    feature = "rp2040",
+    any(feature = "rp_no_pio", not(feature = "rp_pio"))
+))]
 mod dht_rp;
 
-#[cfg(all(feature = "rp2040", not(feature = "rp_pio")))]
+#[cfg(all(
+    feature = "rp2040",
+    any(feature = "rp_no_pio", not(feature = "rp_pio"))
+))]
 pub use dht_rp::DHTSensor;
 
 #[cfg(all(feature = "rp2040", feature = "rp_pio"))]
@@ -43,4 +48,3 @@ mod dht {
     pub(crate) const MIN_REQUEST_INTERVAL_SECS: u64 = 1;
     pub(crate) const START_LOW_INTERVAL_US: u64 = 18_000; // 18ms
 }
-
