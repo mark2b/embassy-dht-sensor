@@ -32,6 +32,9 @@ async fn main(_spawner: Spawner) -> ! {
                     DHTSensorError::InvalidData => {
                         info!("Invalid data");
                     }
+                    DHTSensorError::NoData => {
+                        info!("No data");
+                    }
                 }
             }
         }

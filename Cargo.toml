@@ -20,7 +20,7 @@ rp_no_pio = []
 [[example]]
 name = "read-dht-sensor-rp"
 path = "examples/read-dht-sensor-rp.rs"
-required-features = ["rp2040", "examples"]
+required-features = ["rp2040", "rp_no_pio", "examples"]
 
 [[example]]
 name = "read-dht-sensor-rp-pio"

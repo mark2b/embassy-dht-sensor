@@ -35,6 +35,7 @@ pub enum DHTSensorError {
     NoData,
     ChecksumError,
     InvalidData,
+    Timeout,
 }
 
 #[cfg(feature = "dht2x")]
