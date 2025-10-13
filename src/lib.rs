@@ -7,21 +7,33 @@ compile_error!("You must select a DHT sensor model with a feature flag: dht1x or
 #[cfg(all(feature = "dht1x", feature = "dht2x"))]
 compile_error!("You must select only one DHT sensor model with a feature flag: dht1x or dht2x");
 
+#[cfg(not(any(feature = "rp_no_pio", feature = "rp_pio")))]
+compile_error!("You must select a DHT sensor model with a feature flag: rp_no_pio or rp_pio");
+
+#[cfg(all(feature = "rp_no_pio", feature = "rp_pio"))]
+compile_error!("You must select only one DHT sensor model with a feature flag: rp_no_pio or rp_pio");
+
 #[cfg(all(
     feature = "rp2040",
-    any(feature = "rp_no_pio", not(feature = "rp_pio"))
+    all(feature = "rp_no_pio", not(feature = "rp_pio"))
 ))]
 mod dht_rp;
 
 #[cfg(all(
     feature = "rp2040",
-    any(feature = "rp_no_pio", not(feature = "rp_pio"))
+    all(feature = "rp_no_pio", not(feature = "rp_pio"))
 ))]
 pub use dht_rp::DHTSensor;
 
-#[cfg(all(feature = "rp2040", feature = "rp_pio"))]
+#[cfg(all(
+    feature = "rp2040",
+    all(feature = "rp_pio", not(feature = "rp_no_pio"))
+))]
 mod dht_rp_pio;
-#[cfg(all(feature = "rp2040", feature = "rp_pio"))]
+#[cfg(all(
+    feature = "rp2040",
+    all(feature = "rp_pio", not(feature = "rp_no_pio"))
+))]
 pub use dht_rp_pio::DHTSensor;
 
 #[derive(Clone)]

@@ -8,6 +8,10 @@ https://github.com/adafruit/DHT-sensor-library
 ## Note
 This library should be used in **release** mode. The measurements made in the **debug** mode are not accurate enough.
 
+### NO PIO support
+It is required to set feature `rp_no_pio` in your `Cargo.toml`.
+
+```toml
 ### PIO support
 Since version 0.2.2 this library supports PIO (Programmable Input/Output) for Raspberry Pi Pico, which allows for more accurate timing when reading data from the DHT sensors.
 To enable PIO support, make sure to include the `rp_pio` feature in your `Cargo.toml`. Using PIO is recommended for better performance.
@@ -26,7 +30,7 @@ Add `embassy-dht-sensor` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-embassy-dht-sensor = "0.1.0"
+embassy-dht-sensor = "0.2.7"
 ```
 
 ## Usage
