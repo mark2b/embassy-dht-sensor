@@ -30,7 +30,7 @@ Add `embassy-dht-sensor` to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-embassy-dht-sensor = "0.2.7"
+embassy-dht-sensor = "0.2.8"
 ```
 
 ## Usage
