@@ -27,7 +27,7 @@ async fn main(spawner: Spawner) -> ! {
     info!("DHT sensor example {}", Instant::now().as_millis());
 
     let driver = Driver::new(p.USB, Irqs);
-    spawner.spawn(logger_task(driver)).unwrap();
+    spawner.spawn(logger_task(driver).unwrap());
 
     let pio = p.PIO0;
     let Pio {
